@@ -90,8 +90,6 @@ void Decrypter::on_saveButton_clicked(){
 }
 
 void Decrypter::on_decryptButton_clicked(){
-    //std::cout << savefilename << std::endl;
-    //std::cout << keystreamfilename << std::endl;
     if (savefilename!="" && keystreamfilename!=""){
         int keystreamSize=0;
         int saveSize=0;
@@ -100,9 +98,6 @@ void Decrypter::on_decryptButton_clicked(){
         std::ofstream decryptedsaveStream; // using fstream for binary i/o for key file
         saveStream.open (savefilename.c_str(), std::ios::binary);
         keyStream.open(keystreamfilename.c_str(), std::ios::binary);
-        //std::string decryptedsavefilename="decrypted"+savefilename;
-        //std::string decryptedsavefilenamepath=boost::filesystem::path(savefilename).stem();
-        //std::string decryptedsavefilename=boost::filesystem::path(savefilename).leaf();
         std::string decryptedsavefilename;
         time_t rawtime;
         struct tm * timeinfo;
@@ -111,6 +106,7 @@ void Decrypter::on_decryptButton_clicked(){
         timeinfo = localtime ( &rawtime );
         strftime (buffer2,100,"Decrypted Save (%Y-%m-%d %H%M%S).bin",timeinfo);
         decryptedsavefilename= buffer2;
+        std::cout << decryptedsavefilename<< std::endl;
 
         QString filename = QFileDialog::getSaveFileName(
             this,
@@ -119,55 +115,53 @@ void Decrypter::on_decryptButton_clicked(){
             tr("Save files (*.bin)") );
         if( !filename.isNull() ){
             qDebug( filename.toUtf8() );
-        }
-        decryptedsavefilename=filename.toUtf8().constData();
-        decryptedsaveStream.open (decryptedsavefilename.c_str(), std::ios::binary);
-        delete timeinfo;
-        // setting the reading position of the target file stream to the end
-        saveStream.seekg (0, std::ios::end);
-        // getting the position of the reading pointer, thereby retrieving target file size
-        saveSize = saveStream.tellg();
-        // setting position of the reading pointer to the start of the file
 
-
-        keyStream.seekg (0, std::ios::end);
-        keystreamSize = keyStream.tellg();
-
-        if (keystreamSize==1048732 && saveSize==1048732){
-
-            char fruitBuffer[415232];
-
-            char buffer[415232];
-
-            char keyBuffer[415232];
-
-            saveStream.seekg (21660, std::ios::beg);
-            saveStream.read (buffer, 415232);
-            keyStream.seekg (21660, std::ios::beg);
-            keyStream.read (keyBuffer, 415232);
-
-            for (int i=0; i<415232; i++){
-
-                // inverting every byte in the buffer
-
-                fruitBuffer[i]=buffer[i] ^ keyBuffer[i];
+            decryptedsavefilename=filename.toUtf8().constData();
+            decryptedsaveStream.open (decryptedsavefilename.c_str(), std::ios::binary);
+            
+            // setting the reading position of the target file stream to the end
+            saveStream.seekg (0, std::ios::end);
+            // getting the position of the reading pointer, thereby retrieving target file size
+            saveSize = saveStream.tellg();
+            saveStream.seekg (0, std::ios::beg);
+            keyStream.seekg (0, std::ios::end);
+            keystreamSize = keyStream.tellg();
+            keyStream.seekg (0, std::ios::beg);
+            
+            if (keystreamSize==saveSize && saveSize==1048732){
+                char fruitBuffer[415232];
+                char buffer[415232];
+                char keyBuffer[415232];
+                saveStream.seekg (21660, std::ios::beg);
+                saveStream.read (buffer, 415232);
+                keyStream.seekg (21660, std::ios::beg);
+                keyStream.read (keyBuffer, 415232);
+                //don't write, unless savePointer is between 21504 and 436736
+                for (int i = 0; i <=415232; i++){
+                    // inverting every byte in the buffer
+                    fruitBuffer[i]=buffer[i] ^ keyBuffer [i];
+                    
+                }
+                // incrementing current file pointer by the amount of buffer
+                
+                // adjusting interface
+                
+                // setting writing pointer to the current location
+                // writing the inverted file
+                decryptedsaveStream.write (fruitBuffer, 415232);
+                saveStream.close();
+                keyStream.close();
+                decryptedsaveStream.close();
+                QMessageBox::information(
+                            this,
+                            tr("Pokemon XY Save Decrypter"),
+                            tr("Save decrypted!") );
 
             }
-
-            // incrementing current file pointer by the amount of buffer
-
-            // setting writing pointer to the current location
-            // writing the inverted file
-            //std::copy(fruitBuffer.begin(), fruitBuffer.end(), std::ostreambuf_iterator<char>(decryptedsaveStream));
-            decryptedsaveStream.write (fruitBuffer, 415232);
-            saveStream.close();
-            keyStream.close();
-            decryptedsaveStream.close();
-            QMessageBox::information(
-            this,
-            tr("Pokemon XY Save Decrypter"),
-            tr("Save decrypted!") );
         }
+    }
+}
+
 //HEAP[PokemonXYSaveDecrypter.exe]:
 //Heap block at 13957FE0 modified at 139BD5E8 past requested size of 65600
 //so I dropped pointers and picked up vectors, until they made my outputs double the size
@@ -179,8 +173,6 @@ void Decrypter::on_decryptButton_clicked(){
         Signal meaning :
         Segmentation fault
 */
-    }
-}
 
 QString Decrypter::openBin()
 {
